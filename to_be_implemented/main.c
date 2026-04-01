@@ -11,9 +11,9 @@
  *
  * Output format (CSV, 100Hz):
  *   ts_ms, ax, ay, az, gx, gy, gz,
+ *   pitch, roll,      <- orientation angles (degrees) from complementary filter
  *   lax, lay, laz,    <- linear accel (gravity removed)
- *   vx,  vy,  vz,     <- integrated velocity (stroke-local)
- *   mag,              <- linear accel magnitude
+ *   mag,              <- accel magnitude for stroke detection
  *   stroke            <- 0=idle 1=active 2=start 3=end
  */
 
@@ -179,13 +179,23 @@ static void imu_stream_task(void *arg)
 {
     imu_sample_t raw;
     sp_state_t   sp;
-    sp_init(&sp);
+
+    // Take one reading first to seed the complementary filter
+    // so pitch/roll start at the actual resting orientation,
+    // not zero. Retry until the sensor responds.
+    esp_err_t seed_err;
+    do {
+        seed_err = mpu6050_read(&raw);
+        vTaskDelay(pdMS_TO_TICKS(5));
+    } while (seed_err != ESP_OK);
+
+    sp_init(&sp, raw.ax, raw.ay, raw.az);
 
     const TickType_t period = pdMS_TO_TICKS(10);  // 10ms = 100 Hz
     TickType_t last_wake = xTaskGetTickCount();
 
     // Print CSV header so Python can parse by column name
-    printf("ts_ms,ax,ay,az,gx,gy,gz,lax,lay,laz,vx,vy,vz,mag,stroke\n");
+    printf("ts_ms,ax,ay,az,gx,gy,gz,pitch,roll,lax,lay,laz,mag,stroke\n");
     fflush(stdout);
 
     while (1) {
@@ -200,14 +210,14 @@ static void imu_stream_task(void *arg)
             int64_t ts_ms = esp_timer_get_time() / 1000;
             printf("%lld,"
                    "%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,"
-                   "%.4f,%.4f,%.4f,"
+                   "%.3f,%.3f,"
                    "%.4f,%.4f,%.4f,"
                    "%.4f,%d\n",
                    ts_ms,
                    raw.ax, raw.ay, raw.az,
                    raw.gx, raw.gy, raw.gz,
+                   sp.pitch, sp.roll,
                    sp.lax, sp.lay, sp.laz,
-                   sp.vx,  sp.vy,  sp.vz,
                    sp.accel_mag,
                    stroke_code(&sp));
         } else {
