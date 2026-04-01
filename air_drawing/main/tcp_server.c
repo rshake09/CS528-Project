@@ -22,6 +22,7 @@
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
+#include "mpu6050.h"
 
 
 #define PORT                        CONFIG_EXAMPLE_PORT
