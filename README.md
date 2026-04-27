@@ -9,7 +9,7 @@ Our goal is to translate natural hand movements into a drawing interface with ge
 ## Gestures
 To ensure reliability and accuracy within the project timeline, we focus on a small and high-impact set of gestures:
 - Greetings: Hello, Goodbye
-- Expressions: Thank You, Hungry
+- Expressions: Thank You, Hungry, Yes, No
 - Alphabet: A, B, C, D
 
 ## Pipeline
