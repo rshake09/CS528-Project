@@ -5,10 +5,13 @@ import argparse
 # ---------------- ARGUMENTS ----------------
 parser = argparse.ArgumentParser()
 parser.add_argument('--label', type=str, required=True)
+parser.add_argument('--user', type=str, required=True)
 parser.add_argument('--count', type=int, default=150)
+
 args = parser.parse_args()
 
 label = args.label.lower()
+user = args.user.lower()
 max_images = args.count
 
 # ---------------- SETUP ----------------
@@ -20,7 +23,7 @@ cap = cv2.VideoCapture(0)
 
 count = 0
 
-print(f"[INFO] Collecting: {label}")
+print(f"[INFO] User: {user} | Label: {label}")
 print("[INFO] Press 's' to save, 'q' to quit")
 
 while True:
@@ -28,11 +31,10 @@ while True:
     if not ret:
         break
 
-    # Flip for natural selfie view
     frame = cv2.flip(frame, 1)
 
     cv2.putText(frame,
-                f"{label} | {count}/{max_images}",
+                f"{user} | {label} | {count}/{max_images}",
                 (10, 40),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
@@ -44,13 +46,16 @@ while True:
     key = cv2.waitKey(1)
 
     if key == ord('s'):
-        file_path = os.path.join(save_dir, f"{count}.jpg")
+        filename = f"{user}_{label}_{count}.jpg"
+        file_path = os.path.join(save_dir, filename)
+
         cv2.imwrite(file_path, frame)
         print(f"Saved {file_path}")
+
         count += 1
 
         if count >= max_images:
-            print("[DONE] Collected enough samples.")
+            print("[DONE] Collection complete.")
             break
 
     elif key == ord('q'):
