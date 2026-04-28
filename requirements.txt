@@ -1,4 +1,5 @@
 numpy
 matplotlib
-open-cv
+opencv-python
 python-mnist
+mediapipe
