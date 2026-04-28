@@ -1,3 +1,4 @@
 {
-    "idf.currentSetup": "/Users/chauminh/.espressif/v5.5.2/esp-idf"
+    "idf.currentSetup": "/Users/chauminh/.espressif/v5.5.2/esp-idf",
+    "cmake.sourceDirectory": "/Users/rizmarizma/528_final/CS528-Project/air_drawing"
 }
