@@ -1,60 +1,70 @@
 import cv2
 import os
-import argparse
-
-# ---------------- ARGUMENTS ----------------
-parser = argparse.ArgumentParser()
-parser.add_argument('--label', type=str, required=True)
-parser.add_argument('--count', type=int, default=150)
-args = parser.parse_args()
-
-label = args.label.lower()
-max_images = args.count
+import mediapipe as mp
 
 # ---------------- SETUP ----------------
-base_dir = "./data"
-save_dir = os.path.join(base_dir, label)
-os.makedirs(save_dir, exist_ok=True)
+input_dir = "./data"
+output_dir = "./processed_data"
+os.makedirs(output_dir, exist_ok=True)
 
-cap = cv2.VideoCapture(0)
+mp_hands = mp.solutions.hands
 
-count = 0
+hands = mp_hands.Hands(
+    static_image_mode=True,
+    max_num_hands=1,
+    min_detection_confidence=0.5
+)
 
-print(f"[INFO] Collecting: {label}")
-print("[INFO] Press 's' to save, 'q' to quit")
+image_size = (224, 224)
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+# ---------------- LOOP ----------------
+for label in os.listdir(input_dir):
+    label_path = os.path.join(input_dir, label)
+    save_label_path = os.path.join(output_dir, label)
+    os.makedirs(save_label_path, exist_ok=True)
 
-    # Flip for natural selfie view
-    frame = cv2.flip(frame, 1)
+    for img_name in os.listdir(label_path):
+        img_path = os.path.join(label_path, img_name)
+        image = cv2.imread(img_path)
 
-    cv2.putText(frame,
-                f"{label} | {count}/{max_images}",
-                (10, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2)
+        if image is None:
+            continue
 
-    cv2.imshow("RAW DATA COLLECTION", frame)
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        result = hands.process(image_rgb)
 
-    key = cv2.waitKey(1)
+        if not result.multi_hand_landmarks:
+            print(f"No hand: {img_name}")
+            continue
 
-    if key == ord('s'):
-        file_path = os.path.join(save_dir, f"{count}.jpg")
-        cv2.imwrite(file_path, frame)
-        print(f"Saved {file_path}")
-        count += 1
+        for hand_landmarks in result.multi_hand_landmarks:
+            h, w, _ = image.shape
 
-        if count >= max_images:
-            print("[DONE] Collected enough samples.")
-            break
+            x_list = [lm.x for lm in hand_landmarks.landmark]
+            y_list = [lm.y for lm in hand_landmarks.landmark]
 
-    elif key == ord('q'):
-        break
+            x_min = int(min(x_list) * w)
+            x_max = int(max(x_list) * w)
+            y_min = int(min(y_list) * h)
+            y_max = int(max(y_list) * h)
 
-cap.release()
-cv2.destroyAllWindows()
+            # margin
+            margin = 20
+            x_min = max(0, x_min - margin)
+            y_min = max(0, y_min - margin)
+            x_max = min(w, x_max + margin)
+            y_max = min(h, y_max + margin)
+
+            crop = image[y_min:y_max, x_min:x_max]
+
+            if crop.size == 0:
+                continue
+
+            crop = cv2.resize(crop, image_size)
+
+            save_path = os.path.join(save_label_path, img_name)
+            cv2.imwrite(save_path, crop)
+
+            print(f"Processed: {save_path}")
+
+hands.close()
