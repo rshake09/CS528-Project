@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 
 # ---------------- SETUP ----------------
-data_dir = "./processed_data"
+data_dir = "./data"
 model_output = "./model.pkl"
 
 mp_hands = mp.solutions.hands
@@ -21,50 +21,59 @@ hands = mp_hands.Hands(
 # ---------------- EXTRACT LANDMARKS ----------------
 data = []
 labels = []
+gesture_labels = set()
 
-gesture_labels = sorted(os.listdir(data_dir))
-print(f"[INFO] Found gestures: {gesture_labels}")
-
-for label in gesture_labels:
-    label_path = os.path.join(data_dir, label)
-    if not os.path.isdir(label_path):
+for user in os.listdir(data_dir):
+    user_path = os.path.join(data_dir, user)
+    if not os.path.isdir(user_path):
         continue
 
-    for img_name in os.listdir(label_path):
-        img_path = os.path.join(label_path, img_name)
-        image = cv2.imread(img_path)
+    print(f"[INFO] Loading data for user: {user}")
 
-        if image is None:
+    for label in os.listdir(user_path):
+        label_path = os.path.join(user_path, label)
+        if not os.path.isdir(label_path):
             continue
 
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        result = hands.process(image_rgb)
+        gesture_labels.add(label)
 
-        if not result.multi_hand_landmarks:
-            continue
+        for img_name in os.listdir(label_path):
+            img_path = os.path.join(label_path, img_name)
+            image = cv2.imread(img_path)
 
-        hand_landmarks = result.multi_hand_landmarks[0]
+            if image is None:
+                continue
 
-        # Flatten all 21 landmarks (x, y) into a 42-length feature vector
-        # Normalize relative to wrist (landmark 0) so position doesn't matter
-        wrist_x = hand_landmarks.landmark[0].x
-        wrist_y = hand_landmarks.landmark[0].y
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            result = hands.process(image_rgb)
 
-        features = []
-        for lm in hand_landmarks.landmark:
-            features.append(lm.x - wrist_x)
-            features.append(lm.y - wrist_y)
+            if not result.multi_hand_landmarks:
+                continue
 
-        data.append(features)
-        labels.append(label)
+            hand_landmarks = result.multi_hand_landmarks[0]
+
+            # Normalize relative to wrist so position doesn't matter
+            wrist_x = hand_landmarks.landmark[0].x
+            wrist_y = hand_landmarks.landmark[0].y
+
+            features = []
+            for lm in hand_landmarks.landmark:
+                features.append(lm.x - wrist_x)
+                features.append(lm.y - wrist_y)
+
+            data.append(features)
+            labels.append(label)
 
 hands.close()
+
+gesture_labels = sorted(gesture_labels)
 
 # ---------------- TRAIN ----------------
 data = np.array(data)
 labels = np.array(labels)
 
-print(f"[INFO] Total samples: {len(data)}")
+print(f"\n[INFO] Total samples: {len(data)}")
+print(f"[INFO] Gestures found: {gesture_labels}")
 print(f"[INFO] Label distribution: { {l: (labels == l).sum() for l in gesture_labels} }")
 
 X_train, X_test, y_train, y_test = train_test_split(
