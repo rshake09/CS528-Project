@@ -4,16 +4,16 @@ import numpy as np
 import mediapipe as mp
 import time
 
-# ---------------- LOAD MODEL ----------------
+# loading model and labels
 with open("./model.pkl", "rb") as f:
     saved = pickle.load(f)
 
 model = saved["model"]
 gesture_labels = saved["labels"]
 
-print(f"[INFO] Loaded model with gestures: {gesture_labels}")
+print(f"[INFO] Loaded model with gestures: {gesture_labels}") # for debugging, can remove later
 
-# ---------------- SETUP ----------------
+# set up mediapipe and webcam
 mp_hands = mp.solutions.hands
 mp_draw = mp.solutions.drawing_utils
 
@@ -26,21 +26,22 @@ hands = mp_hands.Hands(
 
 cap = cv2.VideoCapture(0)
 
-# ---------------- STATE ----------------
+# state for hold logic and sentence building
 sentence = []
 current_prediction = None
 hold_start = None
-HOLD_DURATION = 1.5            # seconds to hold before confirming
+HOLD_DURATION = 1.5
 last_confirmed = None
 last_confirmed_time = 0
-COOLDOWN = 2.0                 # seconds before same word can be added again
+COOLDOWN = 2.0
 
+# instructions
 print("[INFO] Running. Controls:")
 print("  Hold gesture 1.5s -> adds to sentence")
 print("  Press 'c' -> clear sentence")
 print("  Press 'q' -> quit")
 
-# ---------------- LOOP ----------------
+# main loop for real-time gesture recognition
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -57,42 +58,46 @@ while True:
     if result.multi_hand_landmarks:
         hand_landmarks = result.multi_hand_landmarks[0]
 
-        # Draw landmarks
         mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-        # Extract features (same normalization as training)
+        # normalize landmarks relative to wrist
         wrist_x = hand_landmarks.landmark[0].x
         wrist_y = hand_landmarks.landmark[0].y
 
-        features = []
-        for lm in hand_landmarks.landmark:
+        features = [] # storing features for prediction
+        for lm in hand_landmarks.landmark: # iterating through landmarks to create feature vector
             features.append(lm.x - wrist_x)
             features.append(lm.y - wrist_y)
 
+        # predict gesture using the trained model
         features = np.array(features).reshape(1, -1)
         prediction = model.predict(features)[0]
         probs = model.predict_proba(features)[0]
         confidence = max(probs)
 
-        # Only show prediction if confident enough
+        # filter out low confidence predictions
         if confidence < 0.6:
             prediction = None
 
-    # ---------------- HOLD LOGIC ----------------
+    # check how long the gesture has been held
     now = time.time()
 
+    # checking if the current prediction is the same as the last one to determine if we should start or reset the hold timer
     if prediction is not None:
         if prediction == current_prediction:
             held = now - hold_start
             progress = min(held / HOLD_DURATION, 1.0)
 
+            # checking if the gesture has been held long enough to be added to the sentence, and also checking cooldown to prevent repetitions of the same gesture
             if held >= HOLD_DURATION:
+                # add to sentence if not a repeat within cooldown
                 if prediction != last_confirmed or (now - last_confirmed_time) > COOLDOWN:
                     sentence.append(prediction.upper())
                     last_confirmed = prediction
                     last_confirmed_time = now
                     hold_start = now
         else:
+            # new gesture detected, reset hold timer
             current_prediction = prediction
             hold_start = now
             progress = 0.0
@@ -101,10 +106,8 @@ while True:
         hold_start = None
         progress = 0.0
 
-    # ---------------- DRAW UI ----------------
+    # create sentence bar at top
     overlay = frame.copy()
-
-    # Dark bar at top for sentence
     cv2.rectangle(overlay, (0, 0), (w, 70), (20, 20, 20), -1)
     cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
 
@@ -112,13 +115,12 @@ while True:
     cv2.putText(frame, sentence_text, (10, 48),
                 cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 2)
 
-    # Current prediction + confidence
+    # draw prediction and progress bar
     if prediction:
         label_text = f"{prediction.upper()}  ({int(confidence * 100)}%)"
         cv2.putText(frame, label_text, (10, h - 80),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 100), 3)
 
-        # Progress bar for hold
         bar_w = int(w * progress)
         cv2.rectangle(frame, (0, h - 20), (bar_w, h), (0, 255, 100), -1)
         cv2.rectangle(frame, (0, h - 20), (w, h), (80, 80, 80), 2)
@@ -130,7 +132,6 @@ while True:
         cv2.putText(frame, "No gesture detected", (10, h - 80),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (100, 100, 100), 2)
 
-    # Controls hint
     cv2.putText(frame, "C: clear  |  Q: quit", (w - 220, h - 35),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 150), 1)
 
@@ -143,5 +144,6 @@ while True:
         sentence = []
         print("[INFO] Sentence cleared.")
 
+# cleanup
 cap.release()
 cv2.destroyAllWindows()
