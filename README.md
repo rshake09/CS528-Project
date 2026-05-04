@@ -4,8 +4,6 @@ CS528 Final Project
 ## Overview
 Our project aims to build a real-time American Sign Language (ASL) gesture recognition system to assist individuals who are non-verbal or have lost the ability to speak. This system uses a webcam to classify them into meaningful outputs such as letters and common expressions. Our goal is to create a simple and accessible tool that translates ASL gestures into readable text, helping bridge communication gaps in basic interactions. 
 
-Our goal is to translate natural hand movements into a drawing interface with gesture-based controls. 
-
 ## Gestures
 To ensure reliability and accuracy within the project timeline, we focus on a small and high-impact set of gestures:
 - Greetings: Hello, Goodbye
