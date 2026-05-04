@@ -30,10 +30,10 @@ cap = cv2.VideoCapture(0)
 sentence = []
 current_prediction = None
 hold_start = None
-HOLD_DURATION = 1.5
+HOLD_DURATION = 0.8
 last_confirmed = None
 last_confirmed_time = 0
-COOLDOWN = 2.0
+COOLDOWN = 1.2
 
 # instructions
 print("[INFO] Running. Controls:")
