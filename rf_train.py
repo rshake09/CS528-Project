@@ -5,7 +5,8 @@ import mediapipe as mp
 import cv2
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
 
 # set up paths and mediapipe
 data_dir = "./data"
@@ -88,6 +89,55 @@ acc = accuracy_score(y_test, y_pred)
 print(f"\n[RESULT] Test accuracy: {acc * 100:.1f}%")
 print("\n[RESULT] Per-gesture breakdown:")
 print(classification_report(y_test, y_pred))
+
+# evaluate and print results
+y_pred = model.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
+
+print(f"\n[RESULT] Test accuracy: {acc * 100:.1f}%")
+print("\n[RESULT] Per-gesture breakdown:")
+print(classification_report(y_test, y_pred))
+
+# confusion matrix
+cm = confusion_matrix(y_test, y_pred, labels=gesture_labels)
+fig, ax = plt.subplots(figsize=(10, 8))  # Adjust size based on number of classes
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm,
+    display_labels=gesture_labels
+)
+
+disp.plot(
+    ax=ax,
+    cmap='Blues',           # Nice color scheme
+    values_format='d',      # Integer format
+    colorbar=True
+)
+
+# Improve appearance
+plt.title("Confusion Matrix\n(Rows = True Label, Columns = Predicted Label)", 
+          fontsize=14, pad=20)
+plt.xlabel("Predicted Label", fontsize=12)
+plt.ylabel("True Label", fontsize=12)
+
+# Rotate x labels if needed (good for long gesture names)
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
+
+plt.tight_layout()
+
+# Save the figure
+png_path = "./confusion_matrix.png"
+plt.savefig(png_path, dpi=300, bbox_inches='tight')
+print(f"\n[SAVED] Confusion matrix plot saved to {png_path}")
+
+# Optional: also show the plot (comment out if running headless)
+# plt.show()
+
+# save model...
+with open(model_output, "wb") as f:
+    pickle.dump({"model": model, "labels": gesture_labels}, f)
+
+print(f"\n[SAVED] Model saved to {model_output}")
 
 # save model to disk
 with open(model_output, "wb") as f:
