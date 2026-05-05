@@ -130,9 +130,6 @@ png_path = "./confusion_matrix.png"
 plt.savefig(png_path, dpi=300, bbox_inches='tight')
 print(f"\n[SAVED] Confusion matrix plot saved to {png_path}")
 
-# Optional: also show the plot (comment out if running headless)
-# plt.show()
-
 # save model...
 with open(model_output, "wb") as f:
     pickle.dump({"model": model, "labels": gesture_labels}, f)
