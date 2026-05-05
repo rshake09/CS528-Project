@@ -37,7 +37,7 @@ COOLDOWN = 1.2
 
 # instructions
 print("[INFO] Running. Controls:")
-print("  Hold gesture 1.5s -> adds to sentence")
+print("  Hold gesture 0.8s -> adds to sentence")
 print("  Press 'c' -> clear sentence")
 print("  Press 'q' -> quit")
 
@@ -60,7 +60,7 @@ while True:
 
         mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-        # normalize landmarks relative to wrist
+        # normalize keypoints relative to wrist
         wrist_x = hand_landmarks.landmark[0].x
         wrist_y = hand_landmarks.landmark[0].y
 
@@ -107,19 +107,35 @@ while True:
         progress = 0.0
 
     # create sentence bar at top
-    overlay = frame.copy()
-    cv2.rectangle(overlay, (0, 0), (w, 70), (20, 20, 20), -1)
-    cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
+    cv2.rectangle(frame, (0, 0), (w, 70), (20, 20, 20), -1)
 
-    sentence_text = " ".join(sentence) if sentence else "..."
-    cv2.putText(frame, sentence_text, (10, 48),
-                cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 2)
+    # build full sentence text and measure its width to scroll if it overflows
+    full_text = " ".join(sentence) if sentence else "..."
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 1.1
+    font_thickness = 2
+    text_size, _ = cv2.getTextSize(full_text, font, font_scale, font_thickness)
+    text_w = text_size[0]
+    bar_padding = 10
+
+    # if text fits in the bar, just draw it normally
+    # if it overflows, draw onto a wide canvas and crop to show newest words
+    if text_w <= w - bar_padding * 2:
+        cv2.putText(frame, full_text, (bar_padding, 48),
+                    font, font_scale, (255, 255, 255), font_thickness)
+    else:
+        canvas_w = text_w + bar_padding * 2
+        canvas = np.full((70, canvas_w, 3), (20, 20, 20), dtype=np.uint8)
+        cv2.putText(canvas, full_text, (bar_padding, 48),
+                    font, font_scale, (255, 255, 255), font_thickness)
+        # crop from the right so newest words are always visible
+        frame[0:70, 0:w] = canvas[:, canvas_w - w:canvas_w]
 
     # draw prediction and progress bar
     if prediction:
         label_text = f"{prediction.upper()}  ({int(confidence * 100)}%)"
         cv2.putText(frame, label_text, (10, h - 80),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 100), 3)
+                    font, 1.3, (0, 255, 100), 3)
 
         bar_w = int(w * progress)
         cv2.rectangle(frame, (0, h - 20), (bar_w, h), (0, 255, 100), -1)
@@ -127,13 +143,13 @@ while True:
 
         hint = "Hold steady..." if progress < 1.0 else "Added!"
         cv2.putText(frame, hint, (10, h - 35),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
+                    font, 0.6, (200, 200, 200), 1)
     else:
         cv2.putText(frame, "No gesture detected", (10, h - 80),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (100, 100, 100), 2)
+                    font, 0.8, (100, 100, 100), 2)
 
     cv2.putText(frame, "C: clear  |  Q: quit", (w - 220, h - 35),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 150), 1)
+                font, 0.5, (150, 150, 150), 1)
 
     cv2.imshow("ASL Gesture Recognition", frame)
 
