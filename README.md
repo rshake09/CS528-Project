@@ -8,7 +8,7 @@ Our project aims to build a real-time American Sign Language (ASL) gesture recog
 To ensure reliability and accuracy within the project timeline, we focus on a small and high-impact set of gestures:
 - Greetings: Hello, Goodbye
 - Expressions: Thank You, Hungry, Yes, No
-- Alphabet: A, B, C, D
+- Alphabet A-Z
 
 ## Pipeline
 Webcam Input:
