@@ -90,14 +90,6 @@ print(f"\n[RESULT] Test accuracy: {acc * 100:.1f}%")
 print("\n[RESULT] Per-gesture breakdown:")
 print(classification_report(y_test, y_pred))
 
-# evaluate and print results
-y_pred = model.predict(X_test)
-acc = accuracy_score(y_test, y_pred)
-
-print(f"\n[RESULT] Test accuracy: {acc * 100:.1f}%")
-print("\n[RESULT] Per-gesture breakdown:")
-print(classification_report(y_test, y_pred))
-
 # confusion matrix
 cm = confusion_matrix(y_test, y_pred, labels=gesture_labels)
 fig, ax = plt.subplots(figsize=(10, 8))  # Adjust size based on number of classes
